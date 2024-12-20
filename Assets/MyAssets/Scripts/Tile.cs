@@ -1,4 +1,3 @@
-using NUnit.Framework;
 using UnityEngine;
 
 public class Tile : MonoBehaviour
@@ -9,12 +8,14 @@ public class Tile : MonoBehaviour
     private GameObject tower;
     [SerializeField] private Material pathMaterial;
     [SerializeField] private Material tileMaterial;
-    [SerializeField] private Material waypointMaterial;
+    [SerializeField] private Material selectedMaterial;
     [SerializeField] private Transform towerSocket;
+    private bool hasTower = false;
 
     private bool isPath = false;
 
-    private void Start() {
+    private void Start()
+    {
     }
 
     public void SetCoordinates(int row, int col)
@@ -29,15 +30,10 @@ public class Tile : MonoBehaviour
         GetComponent<Renderer>().material = pathMaterial;
     }
 
-    public void SetTile() {
+    public void SetTile()
+    {
         isPath = false;
         GetComponent<Renderer>().material = tileMaterial;
-    }
-
-    public void SetWaypoint()
-    {
-        isPath = true;
-        GetComponent<Renderer>().material = waypointMaterial;
     }
 
     public void AddTower(GameObject tower)
@@ -45,6 +41,7 @@ public class Tile : MonoBehaviour
         this.tower = tower;
         GameObject instantiatedTower = Instantiate(tower, towerSocket.position, Quaternion.identity);
         instantiatedTower.transform.parent = this.transform; // Set the tower as a child of the tile
+        hasTower = true;
     }
 
     public int GetRow()
@@ -67,8 +64,27 @@ public class Tile : MonoBehaviour
         return towerSocket;
     }
 
+    public bool HasTower()
+    {
+        return hasTower;
+    }
+
     void OnMouseDown()
     {
         Debug.Log($"Tile clicked at row: {row}, col: {col}");
+        GameManager.instance.TileClicked(row, col, isPath);
+    }
+
+    public void SetTileSelected(bool selected)
+    {
+        if (selected)
+        {
+            GetComponent<Renderer>().material = selectedMaterial;
+        }
+        else
+        {
+            GetComponent<Renderer>().material = tileMaterial;
+        }
+
     }
 }

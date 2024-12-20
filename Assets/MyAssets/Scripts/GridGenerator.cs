@@ -1,13 +1,12 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.Collections;
 public class GridGenerator : MonoBehaviour
 {
     public Vector2Int gridSize = new Vector2Int(10, 10);
 
-    public float gap = .1f ;
-    
+    public float gap = .1f;
+
     [SerializeField] private List<Vector2Int> path = new List<Vector2Int>();
     public GameObject tilePrefab;
     public GameObject groundPrefab;
@@ -43,9 +42,7 @@ public class GridGenerator : MonoBehaviour
         print("Path: " + string.Join(", ", path.Select(p => $"({p.x}, {p.y})")));
         // Create the ground
         Vector3 groundSize = new Vector3(columns * (tileSize + gap) + tileSize, tileSize, rows * (tileSize + gap) + tileSize);
-        GameObject ground = Instantiate(groundPrefab, groundSize / 2, Quaternion.identity);
-        ground.transform.localScale = groundSize;
-        ground.transform.localPosition = new Vector3(0, 0, 0);
+        GenerateGround(groundSize);
         tiles = new GameObject[rows, columns];
 
         for (int row = 0; row < rows; row++)
@@ -81,6 +78,14 @@ public class GridGenerator : MonoBehaviour
         }
 
         gameObject.transform.position = new Vector3(-(groundSize.x / 2 - tileSize), 0, -(groundSize.z / 2 - tileSize));
+    }
+
+    private void GenerateGround(Vector3 groundSize)
+    {
+        GameObject ground = Instantiate(groundPrefab, Vector3.zero, Quaternion.identity);
+        ground.transform.localScale = groundSize;
+        ground.transform.parent = transform;
+        ground.transform.position = new Vector3((groundSize.x / 2 - tileSize), 0, (groundSize.z / 2 - tileSize));
     }
     private IEnumerable<Vector2Int> GetNeighbors(Vector2Int tile, bool includeDiagonals = false)
     {
@@ -128,7 +133,17 @@ public class GridGenerator : MonoBehaviour
         return GetTile(x, y).transform.position;
     }
 
-    public List<Vector2> GetPath()
+    public Vector3 GetTileLocalPosition(int x, int y)
+    {
+        return GetTile(x, y).transform.localPosition;
+    }
+
+    public List<Vector2Int> GetPath()
+    {
+        return this.path;
+    }
+
+    public List<Vector2> GetWorldPath()
     {
         List<Vector2> path = new List<Vector2>();
         foreach (Vector2Int tile in this.path)
@@ -137,6 +152,18 @@ public class GridGenerator : MonoBehaviour
             path.Add(new Vector2(pos.x, pos.z));
         }
         return path;
+    }
+
+    public List<Vector2> GetLocalPath()
+    {
+        List<Vector2> localPath = new List<Vector2>();
+        int offsetx = this.path[0].x;
+        int offsety = this.path[0].y;
+        for (int i = 0; i < this.path.Count - 1; i++)
+        {
+            localPath.Add(new Vector2(this.path[i].x - offsetx, this.path[i].y - offsety));
+        }
+        return localPath;
     }
 
 }
