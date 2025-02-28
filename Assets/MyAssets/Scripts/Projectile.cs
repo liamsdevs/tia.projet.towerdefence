@@ -3,50 +3,45 @@ using UnityEngine;
 public class Projectile : MonoBehaviour
 {
     private int damage;
-    private float speed;
+    private float speed = 15f;
+    [SerializeField]
+    private GameObject ImpactEffect;
+
 
     private GameObject target;
 
-    public void SetDamage(int damage)
+    public void Seek(GameObject _target, int _damage, float _speed)
     {
-        this.damage = damage;
-    }
-
-    public void SetSpeed(float speed)
-    {
-        this.speed = speed;
-    }
-
-    public void SetTarget(GameObject target)
-    {
-        this.target = target;
+        target = _target;
+        damage = _damage;
+        speed = _speed;
     }
 
     void Update()
     {
         if (target == null)
         {
-            // aller tout droit dans la direction actuelle du canon
-            transform.Translate(Vector3.forward * speed * Time.deltaTime);
+            Destroy(gameObject);
             return;
         }
 
-        Vector3 direction = target.transform.position - transform.position;
+        Vector3 dir = target.transform.position - transform.position;
         float distanceThisFrame = speed * Time.deltaTime;
 
-        if (direction.magnitude <= distanceThisFrame)
+        if (dir.magnitude <= distanceThisFrame)
         {
             HitTarget();
             return;
         }
 
-        transform.position = Vector3.MoveTowards(transform.position, target.transform.position, distanceThisFrame);
+        transform.Translate(dir.normalized * distanceThisFrame, Space.World);
     }
 
     void HitTarget()
     {
-        Debug.Log("Hit target");
-        Destroy(gameObject);
         target.GetComponent<EnemyManager>().TakeDamage(damage);
+        GameObject effectIns = Instantiate(ImpactEffect, transform.position, transform.rotation);
+        Destroy(effectIns, 2f);
+        Destroy(gameObject);
     }
 }

@@ -1,7 +1,6 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine.UI;
 using TMPro;
 
 public class GameManager : MonoBehaviour
@@ -12,23 +11,30 @@ public class GameManager : MonoBehaviour
     public int playerScore = 0;
 
     public int playerMoney = 100;
-    public int currentWave = 0;
-    public GameObject[] enemyPrefabs;
+
+    [SerializeField] private WavesManager wavesManager;
 
     [SerializeField] private GameObject moneyText;
-    [SerializeField] private GameObject waveText;
     [SerializeField] private GameObject livesText;
+
+    [SerializeField] private GameObject gameOverText;
+
+    [SerializeField] private GameObject winText;
+    [SerializeField] private GameObject ath;
     [SerializeField] private Vector2Int spawnCoordinates;
     [SerializeField] private Vector2Int baseCoordinates;
 
     private bool isInEditorMode = false;
     public GameObject gridReference;
     private GridGenerator grid;
-    public float timeBetweenWaves = 60f;
     private bool gameOver = false;
     private GameObject selectedTile;
     private GameObject selectedTowerPrefab;
 
+    public GridGenerator GetGrid()
+    {
+        return grid;
+    }
     void Awake()
     {
         if (instance == null)
@@ -46,9 +52,18 @@ public class GameManager : MonoBehaviour
         grid = gridReference.GetComponent<GridGenerator>();
         grid.GenerateGrid(spawnCoordinates, baseCoordinates);
         SetHealthText();
-        SetWaveText();
         SetMoneyText();
-        StartCoroutine(SpawnWaves());
+    }
+
+    public void StartGame()
+    {
+        ath.SetActive(true);
+        Invoke("StartGameCountdown", 10f);
+    }
+
+    void StartGameCountdown()
+    {
+        wavesManager.StartWaves();
     }
 
 
@@ -57,43 +72,9 @@ public class GameManager : MonoBehaviour
         livesText.GetComponent<TextMeshProUGUI>().text = playerLives.ToString();
     }
 
-    private void SetWaveText()
-    {
-        waveText.GetComponent<TextMeshProUGUI>().text = currentWave.ToString();
-    }
-
     private void SetMoneyText()
     {
         moneyText.GetComponent<TextMeshProUGUI>().text = playerMoney.ToString();
-    }
-
-    IEnumerator SpawnWaves()
-    {
-        while (!gameOver)
-        {
-            yield return new WaitForSeconds(timeBetweenWaves);
-            SpawnWave();
-            currentWave++;
-        }
-    }
-
-    void SpawnWave()
-    {
-        for (int i = 0; i < Random.Range(1, 10); i++)
-        {
-            SpawnEnemy();
-        }
-
-    }
-
-    void SpawnEnemy()
-    {
-        int randomIndex = Random.Range(0, enemyPrefabs.Length);
-        GameObject spawnTile = grid.GetTile(spawnCoordinates.x, spawnCoordinates.y);
-        Transform spawnTransform = spawnTile.GetComponent<Tile>().GetTowerSocketTransform();
-        GameObject enemy = Instantiate(enemyPrefabs[randomIndex], spawnTransform.position, spawnTransform.rotation, grid.transform);
-        PathFollowing pathFollowing = enemy.GetComponent<PathFollowing>();
-        pathFollowing.SetPath(ConvertPathToLocalPositions());
     }
 
     public void EnemyReachedEnd()
@@ -114,7 +95,26 @@ public class GameManager : MonoBehaviour
     void GameOver()
     {
         gameOver = true;
-        Debug.Log("Game Over!");
+        gameOverText.SetActive(true);
+        Invoke("Restart", 10f);
+    }
+
+    void Win()
+    {
+        gameOver = true;
+        winText.SetActive(true);
+        Invoke("Restart", 10f);
+    }
+
+    void Restart()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+    }
+
+    public void GainMoney(int amount)
+    {
+        playerMoney += amount;
+        SetMoneyText();
     }
 
     public List<Vector2> GetWorldPath()
@@ -122,26 +122,9 @@ public class GameManager : MonoBehaviour
         return grid.GetWorldPath();
     }
 
-    public List<Vector2Int> GetPath()
-    {
-        return grid.GetPath();
-    }
-
     public Vector3 GetTileLocalPosition(int x, int y)
     {
         return grid.GetTileLocalPosition(x, y);
-    }
-
-    private List<Vector2> ConvertPathToLocalPositions()
-    {
-        List<Vector2> positions = new List<Vector2>();
-        List<Vector2Int> path = GetPath();
-        foreach (Vector2Int tile in path)
-        {
-            Vector3 localPosition = grid.GetTileLocalPosition(tile.x, tile.y);
-            positions.Add(new Vector2(localPosition.x, localPosition.z));
-        }
-        return positions;
     }
 
     public void TileClicked(int x, int y, bool isPath)
@@ -199,6 +182,16 @@ public class GameManager : MonoBehaviour
         selectedTile.GetComponent<Tile>().AddTower(selectedTowerPrefab);
         selectedTile.GetComponent<Tile>().SetTile();
         selectedTile = null;
+    }
+
+    public Vector2Int GetSpawnCoordinates()
+    {
+        return spawnCoordinates;
+    }
+
+    public Vector2Int GetBaseCoordinates()
+    {
+        return baseCoordinates;
     }
 
 }

@@ -3,18 +3,19 @@ using System.Collections;
 
 public class Tower : MonoBehaviour
 {
+    public string enemyTag = "Enemy";
     [SerializeField] private int cost;
     [SerializeField] private int damage;
     [SerializeField] private float fireRate; // in projectiles per minute
     [SerializeField] private float turnSpeed;
     [SerializeField] private float projectileSpeed;
-    [SerializeField] private float range;
-    [SerializeField] private GameObject turret;
-    [SerializeField] private Transform projectileSocket;
+    [SerializeField] private float range = 15f;
+    [SerializeField] private Transform turret;
+    [SerializeField] private Transform firePoint;
     [SerializeField] private GameObject projectilePrefab;
-
-    private GameObject currentTarget;
-    private Coroutine shootingCoroutine;
+    private GameObject target;
+    private float fireRateInSeconds = 60f / 1f; // Convert fire rate to seconds
+    private float fireCountdown = 0f;
 
     public int GetCost()
     {
@@ -23,72 +24,73 @@ public class Tower : MonoBehaviour
 
     private void Start()
     {
-        shootingCoroutine = StartCoroutine(ShootingRoutine());
+        fireRateInSeconds = 60f / fireRate; // Convert fire rate to seconds
+        InvokeRepeating("UpdateTarget", 0f, 0.5f); // Update target every 0.5 seconds
+    }
+
+    void UpdateTarget()
+    {
+        GameObject[] enemies = GameObject.FindGameObjectsWithTag(enemyTag);
+        float shortestDistance = Mathf.Infinity;
+        GameObject nearestEnemy = null;
+
+        foreach (GameObject enemy in enemies)
+        {
+            float distanceToEnemy = Vector3.Distance(transform.position, enemy.transform.position);
+            if (distanceToEnemy < shortestDistance)
+            {
+                shortestDistance = distanceToEnemy;
+                nearestEnemy = enemy;
+            }
+        }
+
+        if (nearestEnemy != null && shortestDistance <= range)
+        {
+            target = nearestEnemy;
+        }
+        else
+        {
+            target = null;
+        }
     }
 
     private void Update()
     {
-        CheckForTarget();
-        if (currentTarget != null)
+        if (target == null)
         {
-            LookAtTarget();
+            return;
         }
-    }
+        LookAtTarget();
 
-    private IEnumerator ShootingRoutine()
-    {
-        float fireInterval = 60f / fireRate; // convert fireRate to seconds per shot
-        while (true)
+        if (fireCountdown <= 0f)
         {
-            if (currentTarget != null && IsTargetInRange(currentTarget))
-            {
-                Shoot();
-            }
-            yield return new WaitForSeconds(fireInterval);
+            Shoot();
+            fireCountdown = fireRateInSeconds;
         }
+
+        fireCountdown -= Time.deltaTime;
     }
 
     public void Shoot()
     {
-        Debug.Log("Shooting");
-        GameObject projectile = Instantiate(projectilePrefab, projectileSocket.position, Quaternion.identity);
-        projectile.GetComponent<Projectile>().SetDamage(damage);
-        projectile.GetComponent<Projectile>().SetSpeed(projectileSpeed);
-        projectile.GetComponent<Projectile>().SetTarget(currentTarget);
-    }
+        GameObject projectileGO = Instantiate(projectilePrefab, firePoint.position, firePoint.rotation);
+        Projectile projectile = projectileGO.GetComponent<Projectile>();
 
-    private void CheckForTarget()
-    {
-        if (currentTarget == null || !IsTargetInRange(currentTarget))
+        if (projectile != null)
         {
-            currentTarget = FindNewTarget();
+            projectile.Seek(target, damage, projectileSpeed);
         }
-    }
-
-    private bool IsTargetInRange(GameObject target)
-    {
-        return Vector3.Distance(transform.position, target.transform.position) <= range;
-    }
-
-    private GameObject FindNewTarget()
-    {
-        Collider[] colliders = Physics.OverlapSphere(transform.position, range);
-        foreach (Collider collider in colliders)
-        {
-            if (collider.CompareTag("Enemy"))
-            {
-                Debug.Log("Found target");
-                return collider.gameObject;
-            }
-        }
-        return null;
     }
 
     private void LookAtTarget()
     {
-        Vector3 direction = currentTarget.transform.position - turret.transform.position;
+        Vector3 direction = target.transform.position - turret.position;
         Quaternion lookRotation = Quaternion.LookRotation(direction);
-        Vector3 rotation = Quaternion.Lerp(turret.transform.rotation, lookRotation, Time.deltaTime * turnSpeed).eulerAngles;
-        turret.transform.rotation = Quaternion.Euler(0f, rotation.y, 0f);
+        Vector3 rotation = Quaternion.Lerp(turret.rotation, lookRotation, Time.deltaTime * turnSpeed).eulerAngles;
+        turret.rotation = Quaternion.Euler(-90f, rotation.y, 0f);
+    }
+
+    private void OnDrawGizmosSelected() {
+        Gizmos.DrawWireSphere(transform.position, range);
     }
 }

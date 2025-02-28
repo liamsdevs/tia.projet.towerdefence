@@ -3,7 +3,7 @@ using System.Collections.Generic;
 public class PathFollowing : MonoBehaviour
 {
     private List<Vector2> path; // Liste des coordonnées X et Y
-    public float speed = 0.5f; // Vitesse de déplacement
+    private float speed = 0.5f; // Vitesse de déplacement
     private int currentPointIndex = 0;
 
     public void SetPath(List<Vector2> path)
@@ -13,10 +13,15 @@ public class PathFollowing : MonoBehaviour
 
     void Update()
     {
-        Move();
+        Move(speed);
+    }
+    
+    public void SetSpeed(float speed)
+    {
+        this.speed = speed;
     }
 
-    void Move()
+    void Move(float speed)
     {
         if (path == null || path.Count == 0) return;
 
@@ -30,7 +35,7 @@ public class PathFollowing : MonoBehaviour
         if (direction != Vector3.zero)
         {
             Quaternion targetRotation = Quaternion.LookRotation(direction);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, speed * Time.deltaTime);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10 * Time.deltaTime);
         }
 
         if (distance < 0.0001f)
@@ -39,7 +44,9 @@ public class PathFollowing : MonoBehaviour
             if (currentPointIndex >= path.Count)
             {
                 // L'ennemi a atteint la fin du chemin
+                GameManager.instance.EnemyReachedEnd();
                 Destroy(gameObject);
+
             }
         }
     }
